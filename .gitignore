@@ -1,0 +1,7 @@
+.env
+log/
+console_routes.json
+__pycache__/
+dist/
+build/
+translate_readme.py

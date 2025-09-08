@@ -1,0 +1,7 @@
+openai
+python-dotenv
+discord.py
+aiohttp
+requests
+pillow
+tkinterdnd2
