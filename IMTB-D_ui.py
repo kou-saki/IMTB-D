@@ -911,7 +911,7 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         # --- 送信言語選択 ---
         ctrl = ttk.Frame(w); ctrl.pack(fill="x", padx=8, pady=(0,4))
         ttk.Label(ctrl, text="Send Lang").pack(side="left")
-        lang_choices = ["auto","en","ja","zh","ko","es","fr","de","it","pt","ru","id","vi","th"]
+        lang_choices = ["auto","en","ja","zh-Hans","zh-Hant","ko","es","fr","de","it","pt-BR","ru","id","vi","th"]
         var_lang = tk.StringVar(value=route.get("lang") or "en")
         cmb = ttk.Combobox(ctrl, width=8, textvariable=var_lang, values=lang_choices, state="readonly")
         cmb.pack(side="left", padx=6)
