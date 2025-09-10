@@ -603,10 +603,11 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         ttk.Button(top, text="Pick files…", command=self._ft_pick_files).pack(side="right")
         def _on_pause_toggle():
             if self.ft_pause.is_set():
-                self.ft_pause.clear(); btn_pause.config(text="Pause")
+                self.ft_pause.clear(); self.btn_ft_pause.config(text="Pause")
             else:
-                self.ft_pause.set();   btn_pause.config(text="Resume")
-        btn_pause = ttk.Button(top, text="Pause", command=_on_pause_toggle); btn_pause.pack(side="right", padx=(6,0))
+                self.ft_pause.set();   self.btn_ft_pause.config(text="Resume")
+        self.btn_ft_pause = ttk.Button(top, text="Pause", command=_on_pause_toggle)
+        self.btn_ft_pause.pack(side="right", padx=(6,0))
         ttk.Button(top, text="Stop", command=lambda: self.ft_stop.set()).pack(side="right", padx=(6,0))
 
         self.ft_preview = tk.Text(tab_ft, height=14, wrap="word")
@@ -1222,6 +1223,9 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         try:
             self.ft_pause.clear()
             self.ft_stop.clear()
+            # UI のボタンもリセット
+            if hasattr(self, "btn_ft_pause"):
+                self.btn_ft_pause.config(text="Pause")
         except Exception:
             pass
         t = threading.Thread(target=self._ft_process_files, args=(paths,), daemon=True)
