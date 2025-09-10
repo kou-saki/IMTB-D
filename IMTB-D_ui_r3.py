@@ -12,7 +12,13 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 from dataclasses import dataclass
 from typing import List, Callable, Optional
-    
+
+# PDF text extraction (optional)
+try:
+    from pypdf import PdfReader  # pip install pypdf
+except Exception:
+    PdfReader = None
+
 # ---- optional Drag&Drop ----
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -66,6 +72,8 @@ from openai import OpenAI
 from urllib.parse import urlparse
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+# OpenAI互換エンドポイント（LM Studio, vLLM, Ollama(OpenAIプラグイン)等）
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()  # 例: http://127.0.0.1:1234/v1
 DEFAULT_TARGET = os.getenv("PREFERRED_LANG", "ja")
 OUTPUT_DIR     = os.getenv("OUTPUT_DIR", "").strip()
 
@@ -107,10 +115,17 @@ def _ensure_relay_if_local(api_base: str) -> subprocess.Popen | None:
         return None
     if _is_listening(host, port):
         return None
-    cmd = os.getenv("IMTBD_RELAY_CMD")
-    if not cmd:
-        cmd = f"{sys.executable} {RELAY_PY}"
-    return subprocess.Popen(cmd, shell=True, cwd=str(BASE))
+    cmd_env = os.getenv("IMTBD_RELAY_CMD")
+    if cmd_env:
+        print(f"[IMTB-D] Spawning relay via IMTBD_RELAY_CMD: {cmd_env}")
+        return subprocess.Popen(cmd_env, shell=True, cwd=str(BASE))
+    # default: safe argv (no shell) to avoid quoting/extension issues
+    if not RELAY_PY.exists():
+        print(f"[IMTB-D] Relay not found at: {RELAY_PY}")
+        return None
+    argv = [sys.executable, str(RELAY_PY)]
+    print(f"[IMTB-D] Spawning relay: {argv}")
+    return subprocess.Popen(argv, shell=False, cwd=str(BASE))
 
 
 # ---- ユーティリティ ----
@@ -311,7 +326,7 @@ def _translate_long_text_stream(client: OpenAI, text: str, target_lang: str, pla
     return "".join(out_parts)
 
 def _ft_is_supported(p: Path) -> bool:
-    return p.suffix.lower() in {".txt",".md",".rst",".html",".htm",".srt"}
+    return p.suffix.lower() in {".txt",".md",".rst",".html",".htm",".srt", ".pdf"}    # PDF もサポート
 
 def _ft_infer_encoding(_p: Path) -> str:  # 拡張余地あり
     return "utf-8"
@@ -322,7 +337,27 @@ def _ft_out_path(src: Path, lang: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir / f"{base.name}.{lang}.md"
 
-    
+def _ft_read_text_any(p: Path) -> str:
+    """
+    汎用テキスト読取:
+      - PDF: pypdf でテキストレイヤから抽出（OCRは対象外）
+      - その他: 通常のテキスト読取
+    """
+    if p.suffix.lower() == ".pdf":
+        if PdfReader is None:
+            raise RuntimeError("pypdf が見つかりません。`pip install pypdf` を実行してください。")
+        reader = PdfReader(str(p))
+        parts: list[str] = []
+        # 1ページごとに区切りを入れてMarkdown化しやすく
+        for i, page in enumerate(reader.pages, 1):
+            txt = page.extract_text() or ""
+            txt = txt.replace("\r\n", "\n").replace("\r", "\n").strip()
+            # 空ページ対策で必ずセクション見出しを付ける
+            parts.append(f"# Page {i}\n\n{txt}\n")
+        return "\n".join(parts).strip()
+    # テキスト系はそのまま
+    return p.read_text(encoding=_ft_infer_encoding(p))
+
 
 # ---- GUI ----
 class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
@@ -419,7 +454,8 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         self.remote_mode = _host_for_mode not in ("127.0.0.1", "localhost")
         
         # File Transfer: OpenAI client（キーが無ければNoneのまま）
-        self.ft_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+        self.ft_client = (OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL) 
+                          if OPENAI_API_KEY else None)
         # File Transfer state vars
         self.ft_var_lang = tk.StringVar(value=DEFAULT_TARGET)
         self.ft_var_max = tk.IntVar(value=3500)
@@ -467,12 +503,16 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         self.var_openai = tk.StringVar(value=load_env().get("OPENAI_API_KEY",""))
         self.var_pref   = tk.StringVar(value=load_env().get("PREFERRED_LANG","ja"))
         self.var_def    = tk.StringVar(value=load_env().get("DEFAULT_REPLY_LANG","en"))
+        self.var_base   = tk.StringVar(value=load_env().get("OPENAI_BASE_URL",""))
+        self.var_model  = tk.StringVar(value=load_env().get("OPENAI_MODEL",""))
 
         g = ttk.Frame(frm_cfg); g.pack(fill="x", padx=12, pady=8)
         ttk.Label(g, text="Discord Bot Token").grid(row=0, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_token, width=70).grid(row=0, column=1, sticky="we", padx=6)
         ttk.Label(g, text="OpenAI API Key").grid(row=1, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_openai, width=70, show="•").grid(row=1, column=1, sticky="we", padx=6)
         ttk.Label(g, text="Preferred Lang (UI表示)").grid(row=2, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_pref, width=10).grid(row=2, column=1, sticky="w", padx=6)
         ttk.Label(g, text="Default Reply Lang").grid(row=3, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_def, width=10).grid(row=3, column=1, sticky="w", padx=6)
+        ttk.Label(g, text="OpenAI Base URL").grid(row=4, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_base, width=70).grid(row=4, column=1, sticky="we", padx=6)
+        ttk.Label(g, text="OpenAI Model").grid(row=5, column=0, sticky="e"); tk.Entry(g, textvariable=self.var_model, width=24).grid(row=5, column=1, sticky="w", padx=6)
 
         btns = ttk.Frame(frm_cfg); btns.pack(fill="x", padx=12, pady=8)
         ttk.Button(btns, text="Save .env", command=self.on_save_env).pack(side="left")
@@ -628,6 +668,8 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
             "OPENAI_API_KEY": self.var_openai.get().strip(),
             "PREFERRED_LANG": self.var_pref.get().strip() or "ja",
             "DEFAULT_REPLY_LANG": self.var_def.get().strip() or "en",
+            "OPENAI_BASE_URL": self.var_base.get().strip(),
+            "OPENAI_MODEL": self.var_model.get().strip() or "gpt-4o-mini",
         })
         messagebox.showinfo("Saved", f".env saved at:\n{ENV_PATH}")
 
@@ -646,11 +688,14 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         if not RELAY_PY.exists():
             messagebox.showerror("Not found", f"{RELAY_PY} not found."); return
         # 起動
-        cmd = os.getenv("IMTBD_RELAY_CMD")
-        if cmd:
-            self.relay_proc = subprocess.Popen(cmd, shell=True, cwd=str(BASE))
+        cmd_env = os.getenv("IMTBD_RELAY_CMD")
+        if cmd_env:
+            print(f"[IMTB-D] on_start_relay: using IMTBD_RELAY_CMD: {cmd_env}")
+            self.relay_proc = subprocess.Popen(cmd_env, shell=True, cwd=str(BASE))
         else:
-            self.relay_proc = subprocess.Popen([sys.executable, str(RELAY_PY)], cwd=str(BASE))
+            argv = [sys.executable, str(RELAY_PY)]
+            print(f"[IMTB-D] on_start_relay: spawning {argv}")
+            self.relay_proc = subprocess.Popen(argv, shell=False, cwd=str(BASE))
         self.lbl_status_text.set("Status: starting...")
         # API起動待ちを軽くポーリング
         self.after(800, self._check_api_ready)
@@ -985,7 +1030,7 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
 
         # internal state
         pending_images: list[str] = []
-        paused = {"v": False}
+        img_stop = threading.Event()   # ← Stop でセットし、ループを即座に離脱
 
         def _img_add(paths: list[str]):
             nonlocal pending_images
@@ -1017,7 +1062,8 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
             if buf: items.append(buf)
             return items
 
-        def _pick_files():
+        # 画像選択ダイアログ（画像のみを対象に）
+        def _pick_images():
             paths = filedialog.askopenfilenames(filetypes=[
                 ("Images","*.png *.jpg *.jpeg *.webp *.gif"),
                 ("All files","*.*"),
@@ -1076,19 +1122,12 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
             footer, textvariable=var_img_lang, width=8,
             values=["en","ja","zh","ko","es","fr","de","it","pt","ru","id","vi","th"]
         ).pack(side="left", padx=6)
-        # ご要望：Pick の左に Send を配置。ボタンは左→右で: Send, Pick, Translate, Pause, Resume, Stop
-        btn_send = ttk.Button(footer, text="Send", command=lambda: _send())
-        btn_pick = ttk.Button(footer, text="Pick image(s)…", command=_pick_files)
-        btn_tr   = ttk.Button(footer, text="Translate")
-        btn_ps   = ttk.Button(footer, text="Pause")
-        btn_rs   = ttk.Button(footer, text="Resume")
+        # 仕様変更：Sendで画像翻訳まで実行／Translate, Pause, Resume は撤去
+        btn_send = ttk.Button(footer, text="Send")
+        btn_pick = ttk.Button(footer, text="Pick image(s)…", command=_pick_images)
         btn_st   = ttk.Button(footer, text="Stop")
-        # 左から順に並べ、その後に右寄せスペーサーを入れて押し流しを防ぐ
         btn_send.pack(side="left", padx=(0,6))
         btn_pick.pack(side="left", padx=(0,12))
-        btn_tr.pack(side="left", padx=(0,6))
-        btn_ps.pack(side="left", padx=(0,6))
-        btn_rs.pack(side="left", padx=(0,6))
         btn_st.pack(side="left", padx=(0,0))
 
         # worker
@@ -1097,9 +1136,8 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
             stop_flag["v"] = False
             lang = (var_img_lang.get() or "en").strip()
             for p in list(pending_images):
-                if stop_flag["v"]: break
-                while paused["v"] and not stop_flag["v"]:
-                    time.sleep(0.1)
+                if stop_flag["v"]:
+                    break
                 try:
                     # Windows→Pi 間でパスは通らないので、中身をBase64で送る
                     with open(p, "rb") as f:
@@ -1120,13 +1158,17 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
 
         def _start_tr():
             threading.Thread(target=_run_translate, daemon=True).start()
-        def _pause(): paused["v"] = True
-        def _resume(): paused["v"] = False
-        def _stop(): stop_flag["v"] = True; paused["v"] = False
-        btn_tr.configure(command=_start_tr)
-        btn_ps.configure(command=_pause)
-        btn_rs.configure(command=_resume)
-        btn_st.configure(command=_stop)
+        def _stop(): stop_flag["v"] = True
+        def _stop_all():
+            _stop()
+            pending_images.clear(); _refresh_drop()
+        # Send で「画像翻訳（あれば）→テキスト送信」までを一括実行
+        def _send_and_translate(_=None):
+            if pending_images:
+                _start_tr()
+            _send()
+        btn_send.configure(command=_send_and_translate)
+        btn_st.configure(command=_stop_all)
 
         # ===== 送信処理（Enter=送信 / Ctrl+Enter=改行） =====
         def _send(_=None):
@@ -1151,7 +1193,7 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
                 return
             if ev.state & 0x1:   # Shift
                 return
-            _send(); return "break"
+            _send_and_translate(); return "break"
         send_box.bind("<Return>", _on_return)
 
         self._chat_windows = getattr(self, "_chat_windows", [])
@@ -1228,13 +1270,19 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         t.start()
 
     def _ft_process_files(self, paths: list[str]):
+    # 直近に「Save .env」された変更を取り込む
+        try:
+            load_dotenv(override=True)
+        except Exception:
+            pass
         # OpenAIキーが .env 保存後に変わった可能性があるので都度見る
         if not os.getenv("OPENAI_API_KEY") and not OPENAI_API_KEY:
             self._ft_log("ERROR: OPENAI_API_KEY is not set."); return
         # 既存クライアントが無ければ作る
         if not self.ft_client:
-            key = os.getenv("OPENAI_API_KEY", OPENAI_API_KEY)
-            self.ft_client = OpenAI(api_key=key)
+            key  = os.getenv("OPENAI_API_KEY", OPENAI_API_KEY)
+            burl = os.getenv("OPENAI_BASE_URL", OPENAI_BASE_URL)
+            self.ft_client = OpenAI(api_key=key, base_url=burl if burl else None)
 
         target_lang = (self.ft_var_lang.get() or DEFAULT_TARGET).strip()
         plan = _ChunkPlan(max_tokens=max(800, int(self.ft_var_max.get() or 3500)))
@@ -1244,7 +1292,7 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
             if not _ft_is_supported(p): self._ft_log(f"Skip: unsupported -> {p.name}"); continue
             try:
                 self._ft_log(f"Reading: {p}")
-                text = p.read_text(encoding=_ft_infer_encoding(p))
+                text = _ft_read_text_any(p)
             except Exception as e:
                 self._ft_log(f"ERROR reading {p.name}: {e}"); continue
 
