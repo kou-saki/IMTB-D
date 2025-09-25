@@ -1,10 +1,10 @@
 # Interactive Multilingual Translator BOT for Discord(IMTB-D)
 
-A tool that allows you to read and write Discord messages translated into your **preferred language** using a **Translation Relay Bot**, a **Desktop UI (Tkinter)** for local control, and a **Console** for terminal use. (As of 2025/09/08, supported languages: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th) Translation logs can be saved in **JSONL** format, and a UNC shared path (e.g., `\\raspberrypi\IMTB-D\messages.jsonl`) can also be specified.
+A **Translation Relay Bot** that allows you to read and write Discord messages in your “preferred language,” along with a **Desktop UI (Tkinter)** for local control and a **Console** for terminal use. (As of 2025/09/08, supported languages: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th) Translation logs can be saved in **JSONL** format, and a UNC shared path (e.g., `\\raspberrypi\IMTB-D\messages.jsonl`) can also be specified.
 
 - **Relay**: Discord Bot and local HTTP API (`/bind`, `/send`, `/send_image`, `/stats`).
-- **UI**: .env editing, destination registration and sending, log viewing, **file translation (live preview)**, automatic Relay startup when used locally.
-- **Console**: Bind & send from the terminal. Tail display of logs.
+- **UI**: .env editing, destination registration and sending, log viewing, **file translation (live preview)**, automatic Relay startup when local.
+- **Console**: Bind & send from terminal. Tail display of logs.
 
 > Requirements: **Discord Bot Token** and **OpenAI API Key**.
 
@@ -24,6 +24,7 @@ log/messages.jsonl       # Translation log (JSON Lines)
 
 ## Requirements
 
+- Download the main files
 - Python 3.10+ (Environment where Tkinter can be used)
 - `pip install -r requirements.txt` 
 
@@ -41,10 +42,10 @@ Create a `.env` file at the root of this repository.
 DISCORD_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENAI_API_KEY=sk-********************************
 
-# It is recommended to use localhost when using locally (UI will automatically start Relay)
+# For local use, localhost is recommended (UI will automatically start Relay)
 IMTBD_API_BASE=http://127.0.0.1:8765
 
-# (Optional) Log storage location. Windows uses UNC, Linux/mac can use normal path
+# (Optional) Log storage location. UNC for Windows, normal path for Linux/mac is fine
 IMTBD_JSONL_PATH=\\\\raspberrypi\\IMTB-D\\messages.jsonl
 
 # (Optional) Translation settings
@@ -57,16 +58,16 @@ DEFAULT_REPLY_LANG=en
 
 ---
 
-## How to Use
+## Usage
 
-### A. Use UI + Relay Locally (Quickest)
+### A. Using UI + Relay Locally (Quickest)
 
 ```bash
 python IMTB-D_ui.py
 ```
 
 - If `IMTBD_API_BASE` is `http://127.0.0.1:8765` or `localhost`,  
-  the UI will **automatically assist in starting Relay** (after startup, "API ready" will be displayed).
+  the UI will **automatically assist in starting Relay** (it will display "API ready" after startup).
   
   ![setup.png](docs/images/setup.png)
   
@@ -76,7 +77,7 @@ python IMTB-D_ui.py
   
   ![destinations.png](docs/images/destinations.png)
 
-- The log at the bottom will reflect the sending and receiving.
+- The sent and received messages will be reflected in the log at the bottom.
   
   - Click "Open Window" while a destination (DM/Channel) is selected → an individual chat window will open.
     
@@ -86,7 +87,7 @@ python IMTB-D_ui.py
     
     - Enter text in the box at the bottom of the window and press send or Enter to send.
     
-    - If multiple lines are needed, you can insert a line break with Ctrl+Enter.
+    - For multiple lines, you can use Ctrl+Enter to insert a line break.
   
   - Image Translate (Inpaint)
     
@@ -102,7 +103,7 @@ python IMTB-D_ui.py
       
       ![translated.png](docs/images/translated.png)
 
-### B. Connect to Remote Relay (e.g., Raspberry Pi)
+### B. Connecting to a Remote Relay (e.g., Raspberry Pi)
 
 - Start `IMTB-D_relay.py` on the server (e.g., Pi),
 - Set `IMTBD_API_BASE` in the UI's `.env` to `http://<server-ip>:8765`.  
@@ -114,7 +115,7 @@ python IMTB-D_ui.py
 # To a channel
 python IMTB-D_console.py --name general --channel 123456789012345678 --lang en
 
-# To DM
+# To a DM
 python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 
 # Typing directly into standard input will send the message (logs will be displayed in tail).
@@ -125,16 +126,16 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 ## API (Relay)
 
 - `POST /bind` — Register console name and destination (dm/channel, id, lang)  
-- `POST /send` — Send text to specified console (can temporarily overwrite with `lang`)  
-- `POST /send_image` — Image OCR → translation → inpainting & drawing → sending  
+- `POST /send` — Send text to the specified console (can temporarily overwrite with `lang`)  
+- `POST /send_image` — Image OCR → Translation → Inpainting & Drawing → Sending  
 - `GET  /stats` — Startup status and binding list
 
 ---
 
-## Log (JSONL)
+## Logs (JSONL)
 
 - Default: `log/messages.jsonl`. You can change the storage location with `IMTBD_JSONL_PATH` in `.env`.  
-- The UI tails this file for display. It can also be viewed over UNC sharing.
+- The UI tails this file for display. It can also be viewed over UNC shares.
 
 ---
 

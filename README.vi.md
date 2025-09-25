@@ -1,21 +1,22 @@
 # Interactive Multilingual Translator BOT for Discord(IMTB-D)
 
-Công cụ **Bot dịch Relay** cho phép dịch và đọc tin nhắn trên Discord sang “ngôn ngữ yêu thích”, cùng với **Giao diện người dùng Desktop (Tkinter)** để điều khiển từ xa và **Console** có thể sử dụng từ terminal. (Tính đến 2025/09/08: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th)
+Discord của tin nhắn được dịch sang “ngôn ngữ yêu thích” để đọc và viết bằng **Bot dịch Relay**,
+công cụ này bao gồm **Giao diện người dùng máy tính để bàn (Tkinter)** có thể điều khiển từ xa và **Console** có thể sử dụng từ terminal. (Tính đến ngày 2025/09/08: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th)
 Nhật ký dịch được lưu dưới dạng **JSONL** và có thể chỉ định đường dẫn chia sẻ UNC (ví dụ: `\\raspberrypi\IMTB-D\messages.jsonl`).
 
 - **Relay**: Discord Bot và API HTTP cục bộ (`/bind`, `/send`, `/send_image`, `/stats`).
 - **UI**: Chỉnh sửa .env, đăng ký và gửi đến đích, xem nhật ký, **dịch tệp (xem trước trực tiếp)**, tự động khởi động Relay khi ở chế độ cục bộ.
-- **Console**: Gắn kết và gửi từ terminal. Hiển thị nhật ký theo dạng tail.
+- **Console**: Liên kết và gửi từ terminal. Hiển thị nhật ký theo dõi.
 
 > Những gì cần thiết: **Discord Bot Token** và **OpenAI API Key**.
 
 ---
 
-## Cấu trúc (các tệp chính)
+## Cấu trúc (tệp chính)
 
 ```
 IMTB-D_relay.py      # Discord Bot + HTTP API
-IMTB-D_ui.py         # Giao diện người dùng Desktop (Tkinter)
+IMTB-D_ui.py         # Giao diện người dùng máy tính để bàn (Tkinter)
 IMTB-D_console.py    # Console cho terminal
 console_routes.json      # Lưu trữ đích (UI ghi)
 log/messages.jsonl       # Nhật ký dịch (JSON Lines)
@@ -25,6 +26,7 @@ log/messages.jsonl       # Nhật ký dịch (JSON Lines)
 
 ## Yêu cầu
 
+- Tải xuống các tệp chính
 - Python 3.10+ (môi trường có thể sử dụng Tkinter)
 - `pip install -r requirements.txt` 
 
@@ -42,10 +44,10 @@ Tạo tệp `.env` trong thư mục gốc của kho lưu trữ này.
 DISCORD_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENAI_API_KEY=sk-********************************
 
-# Khuyến nghị sử dụng localhost khi sử dụng cục bộ (UI tự động khởi động Relay)
+# Đối với việc sử dụng cục bộ, khuyến nghị sử dụng localhost (UI tự động khởi động Relay)
 IMTBD_API_BASE=http://127.0.0.1:8765
 
-# (Tùy chọn) Đường dẫn lưu trữ nhật ký. Windows sử dụng UNC, Linux/mac sử dụng đường dẫn thông thường
+# (Tùy chọn) Địa điểm lưu trữ nhật ký. Windows sử dụng UNC, Linux/mac có thể sử dụng đường dẫn thông thường
 IMTBD_JSONL_PATH=\\\\raspberrypi\\IMTB-D\\messages.jsonl
 
 # (Tùy chọn) Cài đặt dịch
@@ -67,25 +69,25 @@ python IMTB-D_ui.py
 ```
 
 - Nếu `IMTBD_API_BASE` là `http://127.0.0.1:8765` hoặc `localhost`,  
-  UI sẽ **tự động hỗ trợ khởi động Relay** (sau khi khởi động sẽ hiển thị "API ready").
+  UI sẽ **tự động hỗ trợ khởi động Relay** (sau khi khởi động sẽ hiển thị “API ready”).
   
   ![setup.png](docs/images/setup.png)
   
-  Chỉnh sửa `.env` từ tab "Setup" và **Lưu .env**.
+  Chỉnh sửa `.env` từ tab “Setup” và **Lưu .env**.
 
-- Trong tab "Destinations", gán đích (DM/Channel) → nhập văn bản → **Gửi**.
+- Trong tab “Destinations”, **Bind** đến đích (DM/Channel) → Nhập văn bản → **Gửi**.
   
   ![destinations.png](docs/images/destinations.png)
 
 - Nhật ký ở phía dưới sẽ phản ánh việc gửi và nhận.
   
-  - Khi chọn đích (DM/Channel), nhấp vào "Open Window" → màn hình trò chuyện riêng sẽ mở ra.
+  - Khi chọn đích (DM/Channel), nhấp vào “Open Window” → màn hình trò chuyện riêng sẽ mở ra.
     
     ![chat_window2.png](docs/images/chat_window2.png)
   
   - Dịch văn bản
     
-    - Nhập văn bản vào ô ở dưới cùng của cửa sổ và nhấn gửi hoặc Enter để gửi.
+    - Nhập văn bản vào ô ở dưới cùng của cửa sổ và nhấn send hoặc Enter để gửi.
     
     - Nếu cần nhập nhiều dòng, có thể sử dụng Ctrl+Enter để xuống dòng.
   
@@ -93,7 +95,7 @@ python IMTB-D_ui.py
     
     - Kéo và thả hình ảnh để thực hiện dịch hình ảnh theo phương pháp inpaint.
     
-    - Hiện tại, chất lượng chưa cao nhưng có thể tham khảo.
+    - Hiện tại, chất lượng chưa được tốt lắm, nhưng có thể tham khảo.
       
       Trước khi dịch
       
@@ -106,8 +108,8 @@ python IMTB-D_ui.py
 ### B. Kết nối với Relay từ xa (ví dụ: Raspberry Pi)
 
 - Khởi động `IMTB-D_relay.py` trên máy chủ (Pi, v.v.),
-- Cài đặt `IMTBD_API_BASE` trong `.env` của UI thành `http://<server-ip>:8765`.  
-- Trong trường hợp này, chức năng Bắt đầu/Dừng của UI sẽ bị vô hiệu hóa và hoạt động ở chế độ **từ xa**.
+- Thiết lập `IMTBD_API_BASE` trong `.env` của UI thành `http://<server-ip>:8765`.  
+- Trong trường hợp này, Start/Stop của UI sẽ bị vô hiệu hóa và hoạt động ở chế độ **từ xa**.
 
 ### C. Console (terminal)
 
@@ -118,7 +120,7 @@ python IMTB-D_console.py --name general --channel 123456789012345678 --lang en
 # Đến DM
 python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 
-# Nhập trực tiếp vào đầu vào chuẩn để gửi (nhật ký sẽ hiển thị theo dạng tail).
+# Nhập trực tiếp vào đầu vào chuẩn để gửi (nhật ký sẽ hiển thị theo dõi).
 ```
 
 ---
@@ -128,13 +130,13 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 - `POST /bind` — Đăng ký tên console và đích (dm/channel, id, lang)  
 - `POST /send` — Gửi văn bản đến console đã chỉ định (có thể tạm thời ghi đè bằng `lang`)  
 - `POST /send_image` — OCR hình ảnh → dịch → inpaint & vẽ → gửi  
-- `GET  /stats` — Trạng thái khởi động và danh sách gán
+- `GET  /stats` — Trạng thái khởi động và danh sách liên kết
 
 ---
 
 ## Nhật ký (JSONL)
 
-- Mặc định: `log/messages.jsonl`. Có thể thay đổi đường dẫn lưu trữ bằng `IMTBD_JSONL_PATH` trong `.env`.  
+- Mặc định: `log/messages.jsonl`. Có thể thay đổi địa điểm lưu trữ bằng `IMTBD_JSONL_PATH` trong `.env`.  
 - UI sẽ theo dõi tệp này và hiển thị trên màn hình. Có thể xem qua chia sẻ UNC.
 
 ---
@@ -143,7 +145,7 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 
 **Q: Cách viết đường dẫn UNC trên Windows?**  
 A: Trong `.env`, viết `\\raspberrypi\IMTB-D\messages.jsonl` với **hai dấu gạch chéo ngược**.  
-   Do yêu cầu escape trong `.env`, thực tế nên viết là `\\\\raspberrypi\\IMTB-D\\messages.jsonl` cho an toàn.
+   Do yêu cầu thoát trong `.env`, thực tế nên viết là `\\\\raspberrypi\\IMTB-D\\messages.jsonl` cho an toàn.
 
 ---
 

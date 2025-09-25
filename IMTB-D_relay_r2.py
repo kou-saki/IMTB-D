@@ -5,6 +5,9 @@ from pathlib import Path
 from datetime import datetime, timezone
 from PIL import Image, ImageDraw
 
+import signal
+import atexit
+import shutil
 import discord
 from discord import Intents, DMChannel, TextChannel
 from dotenv import load_dotenv
@@ -12,8 +15,6 @@ from aiohttp import web
 
 from openai import OpenAI
 
-import signal
-import atexit
 
 # ===== paths / .env =====
 # このスクリプトが置かれたディレクトリを基準に .env を読む（CWDに依存しない）
@@ -40,6 +41,8 @@ client_oa = OpenAI(api_key=OPENAI_API_KEY)
 LOG_DIR = SCRIPT_DIR / "log"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 JSONL_PATH = LOG_DIR / "messages.jsonl"
+LOG_IMG_DIR = LOG_DIR / "images"
+LOG_IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 def append_jsonl(record: dict):
     try:
@@ -157,6 +160,11 @@ class IMTBD_Relay(discord.Client):
                 return web.json_response({"ok": False, "error":"console not bound"}, status=400)
 
             try:
+                im = None
+                mask = None
+                painted = None
+                buf_img = None
+                buf_mask = None
 
                 # ---- 0) 入力画像の実体を用意（b64優先）
                 if b64_in:
@@ -281,6 +289,13 @@ class IMTBD_Relay(discord.Client):
                 out_path = Path(img_path).with_suffix(f".{target_lang}.png")
                 painted.save(out_path, format="PNG")
 
+                # 画像ログ保存（送信した画像を保管）
+                ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                base = (Path(filename).stem or Path(img_path).stem)
+                log_name = f"{ts}_{base}.{target_lang}.png"
+                log_path = LOG_IMG_DIR / log_name
+                shutil.copy2(out_path, log_path)
+
                 # ---- 5) Post to Discord
                 if route.get("type") == "dm":
                     user = await self.fetch_user(int(route["user_id"]))
@@ -298,11 +313,31 @@ class IMTBD_Relay(discord.Client):
                     "to_lang": target_lang,
                     "original": f"[image]{Path(img_path).name}",
                     "translated": f"[image]{out_path.name}",
+                    "translated_log_path": str(log_path),
                     "console": name,
                 })
             except Exception as e:
                 self.metrics["last_error"] = str(e)
                 return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+            finally:
+                # 後始末：メモリバッファとPILオブジェクトをクローズ（成功/失敗に関わらず）
+                for obj in (painted, im, mask):
+                    try:
+                        obj and obj.close()
+                    except Exception:
+                        pass
+                for buf in (buf_img, buf_mask):
+                    try:
+                        buf and buf.close()
+                    except Exception:
+                        pass
+                # b64由来の一時ファイルは削除（元ファイルはそのまま）
+                try:
+                    if b64_in:
+                        Path(img_path).unlink(missing_ok=True)
+                except Exception:
+                    pass
 
             return web.json_response({"ok": True})
 

@@ -1,10 +1,11 @@
 # Interactive Multilingual Translator BOT for Discord(IMTB-D)
 
-Ferramenta que permite traduzir e ler mensagens do Discord em “qualquer idioma” com um **Bot de Tradução Relay**, controlado a partir de uma **UI de Desktop (Tkinter)** ou através do **Console** no terminal. (Suporte atual em: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th até 08/09/2025)
-Os logs de tradução podem ser salvos em **JSONL** e um caminho de compartilhamento UNC (ex: `\\raspberrypi\IMTB-D\messages.jsonl`) também pode ser especificado.
+Um **Bot de Tradução Relay** que permite ler e escrever mensagens do Discord em “qualquer idioma”,
+com uma **UI de Desktop (Tkinter)** para operação local e um **Console** utilizável a partir do terminal. (Suporte atual em 2025/09/08: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th)
+Os logs de tradução podem ser salvos em **JSONL**, e um caminho de compartilhamento UNC (ex: `\\raspberrypi\IMTB-D\messages.jsonl`) também pode ser especificado.
 
 - **Relay**: Bot do Discord e API HTTP local (`/bind`, `/send`, `/send_image`, `/stats`).
-- **UI**: Edição de .env, registro e envio de destinos, visualização de logs, **tradução de arquivos (pré-visualização ao vivo)**, iniciação automática do Relay quando em modo local.
+- **UI**: Edição do .env, registro e envio de destinos, visualização de logs, **tradução de arquivos (visualização ao vivo)**, iniciação automática do Relay quando em modo local.
 - **Console**: Vinculação e envio a partir do terminal. Exibição de logs em tempo real.
 
 > Requisitos: **Token do Bot do Discord** e **Chave da API do OpenAI**.
@@ -25,7 +26,8 @@ log/messages.jsonl       # Logs de tradução (JSON Lines)
 
 ## Requisitos
 
-- Python 3.10+ (ambiente que suporta Tkinter)
+- Baixar os arquivos principais
+- Python 3.10+ (Ambiente que suporte Tkinter)
 - `pip install -r requirements.txt` 
 
 ```bash
@@ -34,7 +36,7 @@ pip install -r requirements.txt
 
 ---
 
-## .env (exemplo mínimo)
+## .env (Exemplo mínimo)
 
 Crie um arquivo `.env` na raiz deste repositório.
 
@@ -45,10 +47,10 @@ OPENAI_API_KEY=sk-********************************
 # Para uso local, recomenda-se localhost (a UI inicia o Relay automaticamente)
 IMTBD_API_BASE=http://127.0.0.1:8765
 
-# (opcional) Caminho para salvar logs. Windows usa UNC, Linux/mac pode usar caminho normal
+# (Opcional) Caminho para salvar logs. Windows usa UNC, Linux/mac pode usar caminho normal
 IMTBD_JSONL_PATH=\\\\raspberrypi\\IMTB-D\\messages.jsonl
 
-# (opcional) Configurações de tradução
+# (Opcional) Configurações de tradução
 OPENAI_MODEL=gpt-4o-mini
 PREFERRED_LANG=ja
 DEFAULT_REPLY_LANG=en
@@ -67,7 +69,7 @@ python IMTB-D_ui.py
 ```
 
 - Se `IMTBD_API_BASE` for `http://127.0.0.1:8765` ou `localhost`,  
-  a UI **ajuda automaticamente a iniciar o Relay** (após a inicialização, exibirá "API ready").
+  a UI **ajudará automaticamente a iniciar o Relay** (após a inicialização, exibirá "API ready").
   
   ![setup.png](docs/images/setup.png)
   
@@ -87,7 +89,7 @@ python IMTB-D_ui.py
     
     - Insira o texto na caixa na parte inferior da janela e pressione send ou Enter para enviar.
     
-    - Para inserir várias linhas, use Ctrl+Enter para quebrar a linha.
+    - Para inserir várias linhas, use Ctrl+Enter para nova linha.
   
   - Tradução de Imagem (Inpaint)
     
@@ -106,8 +108,8 @@ python IMTB-D_ui.py
 ### B. Conectar ao Relay remoto (ex: Raspberry Pi)
 
 - Inicie `IMTB-D_relay.py` no servidor (Pi, etc.),
-- Configure `IMTBD_API_BASE` no `.env` da UI para `http://<server-ip>:8765`.  
-- Nesse caso, o Start/Stop da UI será desativado e funcionará em **modo remoto**.
+- Configure o `.env` da UI com `IMTBD_API_BASE` para `http://<server-ip>:8765`.  
+- Nesse caso, o Start/Stop da UI será desativado, funcionando em **modo remoto**.
 
 ### C. Console (terminal)
 
@@ -126,7 +128,7 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 ## API (Relay)
 
 - `POST /bind` — Registra o nome do console e o destino (dm/canal, id, lang)  
-- `POST /send` — Envia texto para o console especificado (pode ser temporariamente sobrescrito por `lang`)  
+- `POST /send` — Envia texto para o console especificado (pode ser temporariamente sobrescrito com `lang`)  
 - `POST /send_image` — OCR da imagem → tradução → inpainting e desenho → envio  
 - `GET  /stats` — Estado de inicialização e lista de vinculações
 
@@ -135,7 +137,7 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 ## Logs (JSONL)
 
 - Padrão: `log/messages.jsonl`. O caminho de salvamento pode ser alterado em `IMTBD_JSONL_PATH` no `.env`.  
-- A UI faz tail deste arquivo para exibição na tela. Também é possível visualizar através de compartilhamento UNC.
+- A UI faz tail deste arquivo para exibição na tela. Também é acessível através de compartilhamento UNC.
 
 ---
 
@@ -143,7 +145,7 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 
 **Q: Como escrever o caminho UNC no Windows?**  
 A: No `.env`, escreva `\\raspberrypi\IMTB-D\messages.jsonl` com **duas barras invertidas**.  
-   Devido à necessidade de escape no `.env`, é mais seguro escrever como `\\\\raspberrypi\\IMTB-D\\messages.jsonl`.
+   Devido à necessidade de escape no `.env`, é mais seguro escrever `\\\\raspberrypi\\IMTB-D\\messages.jsonl`.
 
 ---
 

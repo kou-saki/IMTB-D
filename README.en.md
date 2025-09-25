@@ -1,9 +1,9 @@
 # Interactive Multilingual Translator BOT for Discord(IMTB-D)
 
-A **Translation Relay Bot** that can read and write Discord messages in your "preferred language," along with a **Desktop UI (Tkinter)** for local operation and a **Console** for terminal use. (As of 2025/09/08, supported languages: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th) Translation logs can be saved in **JSONL** format, and a UNC shared path (e.g., `\\raspberrypi\IMTB-D\messages.jsonl`) can also be specified.
+A **Translation Relay Bot** that allows you to read and write Discord messages in your "preferred language," along with a **Desktop UI (Tkinter)** for local control and a **Console** for terminal use. (As of 2025/09/08, supported languages: en, ja, zh, ko, es, fr, de, it, pt, ru, id, vi, th) Translation logs can be saved in **JSONL** format, and a UNC shared path (e.g., `\\raspberrypi\IMTB-D\messages.jsonl`) can also be specified.
 
 - **Relay**: Discord Bot and local HTTP API (`/bind`, `/send`, `/send_image`, `/stats`).
-- **UI**: .env editing, destination registration and sending, log viewing, **file translation (live preview)**, automatic Relay startup when in local mode.
+- **UI**: .env editing, destination registration and sending, log viewing, **file translation (live preview)**, automatic Relay startup when local.
 - **Console**: Bind & send from the terminal. Tail display of logs.
 
 > Requirements: **Discord Bot Token** and **OpenAI API Key**.
@@ -24,7 +24,8 @@ log/messages.jsonl       # Translation log (JSON Lines)
 
 ## Requirements
 
-- Python 3.10+ (Environment where Tkinter can be used)
+- Download the main files
+- Python 3.10+ (Environment where Tkinter is available)
 - `pip install -r requirements.txt` 
 
 ```bash
@@ -35,7 +36,7 @@ pip install -r requirements.txt
 
 ## .env (Minimal Example)
 
-Create a `.env` file at the root of this repository.
+Create a `.env` file in the root of this repository.
 
 ```ini
 DISCORD_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -57,16 +58,16 @@ DEFAULT_REPLY_LANG=en
 
 ---
 
-## Usage
+## How to Use
 
-### A. Using UI + Relay Locally (Shortest)
+### A. Use UI + Relay Locally (Quickest)
 
 ```bash
 python IMTB-D_ui.py
 ```
 
 - If `IMTBD_API_BASE` is `http://127.0.0.1:8765` or `localhost`,  
-  the UI will **automatically assist in starting Relay** (after startup, it will display "API ready").
+  the UI will **automatically assist in starting Relay** (after startup, "API ready" will be displayed).
   
   ![setup.png](docs/images/setup.png)
   
@@ -84,13 +85,13 @@ python IMTB-D_ui.py
   
   - Text Translation
     
-    - Input text in the box at the bottom of the window and press send or Enter to send.
+    - Enter text in the box at the bottom of the window and press send or Enter to send.
     
     - For multiple lines, you can press Ctrl+Enter to create a new line.
   
   - Image Translate (Inpaint)
     
-    - Drag and drop an image to perform image translation using inpainting.
+    - Drag and drop an image to perform inpainting-style image translation.
     
     - Currently, the results may not be very clean, but they can serve as a reference.
       
@@ -102,7 +103,7 @@ python IMTB-D_ui.py
       
       ![translated.png](docs/images/translated.png)
 
-### B. Connecting to a Remote Relay (e.g., Raspberry Pi)
+### B. Connect to Remote Relay (e.g., Raspberry Pi)
 
 - Start `IMTB-D_relay.py` on the server (e.g., Pi),
 - Set `IMTBD_API_BASE` in the UI's `.env` to `http://<server-ip>:8765`.  
@@ -133,15 +134,15 @@ python IMTB-D_console.py --name bob --dm 987654321098765432 --lang en
 
 ## Logs (JSONL)
 
-- Default: `log/messages.jsonl`. You can change the storage location with `IMTBD_JSONL_PATH` in the `.env`.  
-- The UI tails this file for display. It can also be viewed over UNC sharing.
+- Default: `log/messages.jsonl`. You can change the storage location with `IMTBD_JSONL_PATH` in `.env`.  
+- The UI tails this file for display. It can also be viewed over UNC shares.
 
 ---
 
 ## Frequently Asked Questions (FAQ)
 
 **Q: How do I write a UNC path for Windows?**  
-A: In the `.env`, write `\\raspberrypi\IMTB-D\messages.jsonl` using **two backslashes**.  
+A: In `.env`, write `\\raspberrypi\IMTB-D\messages.jsonl` with **two backslashes**.  
    Due to escaping in `.env`, it is safer to write it as `\\\\raspberrypi\\IMTB-D\\messages.jsonl`.
 
 ---

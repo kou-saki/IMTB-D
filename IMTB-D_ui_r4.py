@@ -832,10 +832,12 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         self.tailer = Tailer(cb); self.tailer.start()
 
     def _drain_log_queue(self):
+        processed = 0
         try:
-            while True:
+            while processed < 200:  # 1ティックで最大200件まで
                 rec = self.log_queue.get_nowait()
                 self._maybe_show(rec)
+                processed += 1
         except queue.Empty:
             pass
         self.after(200, self._drain_log_queue)
@@ -865,8 +867,16 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
                     continue
                 if self._match_route(rec, rt):
                     line = self._format_line(rec, label=nm)
-                    txt.insert(tk.END, line + "\n")
-                    txt.see(tk.END)
+                    txt.insert("end", line + "\n")
+                    txt.see("end")
+                    # 各ポップアウト窓も同様に上限管理
+                    try:
+                        max_lines = 3000
+                        cur_lines = int(float(txt.index("end-1c").split(".")[0]))
+                        if cur_lines > max_lines:
+                            txt.delete("1.0", f"{cur_lines-2000}.0")
+                    except Exception:
+                        pass
                 alive.append(item)
             except tk.TclError:
                 # 破棄済みウィジェット
@@ -1233,11 +1243,22 @@ class App(TkinterDnD.Tk if DND_AVAILABLE else tk.Tk):
         except Exception as e:
             self.txt_mon.delete("1.0","end"); self.txt_mon.insert("end", f"(stats error) {e}")
         finally:
-            self.after(1000, self._poll_stats)
+            # 2秒周期にして負荷を下げる。必要ならUIの「Monitor」タブ表示中のみ実行に最適化可。
+            self.after(2000, self._poll_stats)
 
     def _append_log(self, line: str):
-        self.txt_log.insert(tk.END, line + "\n")
-        self.txt_log.see(tk.END)
+        self.txt_log.insert("end", line + "\n")
+        self.txt_log.see("end")
+        # keep last N lines (例: 5000行 → 古い部分をまとめて削除)
+        try:
+            max_lines = 5000
+            cur_lines = int(float(self.txt_log.index("end-1c").split(".")[0]))
+            if cur_lines > max_lines:
+                # 古い 4000 行を一括削除して再描画負荷を軽減
+                self.txt_log.delete("1.0", f"{cur_lines-4000}.0")
+        except Exception:
+            pass
+
     # ===================== File Transfer methods =====================
     def _ft_log(self, s: str):
         self.ft_log.insert("end", s + "\n"); self.ft_log.see("end"); self.update_idletasks()

@@ -26,6 +26,7 @@ log/messages.jsonl       # 翻訳ログ（JSON Lines）
 
 ## 要件
 
+- 主要ファイルをダウンロード
 - Python 3.10+（Tkinter が使える環境）
 - `pip install -r requirements.txt` 
 
