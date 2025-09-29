@@ -138,6 +138,41 @@ class IMTBD_Relay(discord.Client):
                           "route": self.console_routes[name] | {"console": name}})
             return web.json_response({"ok": True})
 
+        # --- 追加: HTTPで翻訳結果を返す汎用エンドポイント ------------------
+        async def translate_ep(request: web.Request):
+            """
+            POST /translate
+            JSON: { "text": string, "source": "en"|"ja"|""|"auto", "target": "ja" }
+            Res : { "ok": true, "translated": string, "source": "en", "target": "ja" }
+            """
+            try:
+                data = await request.json()
+            except Exception:
+                return web.json_response({"ok": False, "error": "invalid json"}, status=400)
+
+            text   = (data.get("text") or "").strip()
+            source = (data.get("source") or "").strip().lower()  # "", "auto" は後で扱う
+            target = (data.get("target") or DEFAULT_REPLY_LANG).strip().lower() or DEFAULT_REPLY_LANG
+
+            if not text:
+                return web.json_response({"ok": False, "error": "text required"}, status=400)
+
+            # source 未指定/auto のときは既存の言語判定を再利用
+            src_code = source if source and source != "auto" else detect_lang_cached(text)
+            try:
+                out = translate_text(text, target_lang=target, source_lang=src_code)
+                return web.json_response({
+                    "ok": True,
+                    "translated": out,
+                    "source": src_code,
+                    "target": target
+                })
+            except Exception as e:
+                self.metrics["last_error"] = str(e)
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+        # -------------------------------------------------------------------
+
+
         async def send_image(request: web.Request):
             """
             JSON: {console, path?, filename?, b64?, lang?}
@@ -409,7 +444,8 @@ class IMTBD_Relay(discord.Client):
             web.post("/bind", bind),
             web.post("/send", send),
             web.post("/send_image", send_image),
-            web.get("/stats", stats)
+            web.get("/stats", stats),
+            web.post("/translate", translate_ep)  # ★ 追加
         ])
 
         # ルート可視化（運用確認用）
